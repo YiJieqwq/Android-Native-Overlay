@@ -13,7 +13,6 @@ extern android::ANativeWindowCreator::DisplayInfo displayInfo;
 extern int abs_ScreenX, abs_ScreenY;
 extern int native_window_screen_x, native_window_screen_y;
 extern float surface_screen_x, surface_screen_y;
-extern int requested_surface_height;
 
 void screen_config();
 void drawBegin();

@@ -10,7 +10,10 @@ touch observer.
 - SurfaceComposer-backed transparent overlay;
 - OpenGL ES 3 + Dear ImGui;
 - non-exclusive touch observation;
-- draggable title region, fold/expand control, and close control;
+- draggable title region, title-only fold/expand control, and close control;
+- symmetric bottom-corner handles with immediate proportional resize;
+- HyperOS-inspired size hint outside the glass panel;
+- proportional scaling of the complete ImGui interface;
 - runtime Surface replacement with EGL context reuse;
 - self-extracting shell packaging.
 

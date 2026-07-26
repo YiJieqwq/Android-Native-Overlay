@@ -2,8 +2,9 @@
 
 A product-neutral Android native overlay using the reusable `template/` core.
 It creates one SurfaceComposer surface, initializes OpenGL ES 3 + Dear ImGui,
-observes touch without grabbing it, supports drag/fold/expand/close controls,
-and displays basic display/surface information.
+observes touch without grabbing it, supports drag/title-only fold/expand/close,
+and provides symmetric bottom-corner proportional resize with a size indicator
+outside the glass panel. The whole ImGui interface scales with the window.
 
 Build and package it from the repository root:
 
