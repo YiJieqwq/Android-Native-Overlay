@@ -1,20 +1,13 @@
 # Minimal overlay example
 
-A small, product-neutral Android native overlay using the reusable `template/`
-core. It creates one SurfaceComposer surface, initializes OpenGL ES 3 + Dear
-ImGui, observes touch without grabbing it, displays basic display/surface
-information, and exits through a normal Close button.
+A product-neutral Android native overlay using the reusable `template/` core.
+It creates one SurfaceComposer surface, initializes OpenGL ES 3 + Dear ImGui,
+observes touch without grabbing it, supports drag/fold/expand/close controls,
+and displays basic display/surface information.
 
-Build the target after configuring the project:
+Build and package it from the repository root:
 
 ```sh
-cmake --build build-aarch64-host-minimal --target minimal_overlay -j
-```
-
-The default packaging helper still builds the safe Linuxbkr demo target.
-
-A prebuilt demo is available under `dist/minimal-overlay/`:
-
-```text
-android-native-overlay-minimal.sh
+export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
+./tools/build_android_aarch64_host.sh v0.1.0
 ```

@@ -1,16 +1,8 @@
 #!/system/bin/sh
 set -eu
-printf '\033[38;5;99m'
-cat <<'BANNER'
-╔════════════════════════════════════════════════════╗
-║                                                    ║
-║                  L I N U X B K R                   ║
-║                                                    ║
-╚════════════════════════════════════════════════════╝
-BANNER
-printf '\033[0m\n[+] Linuxbkr UI prototype\n[+] Safe build: storage backend disconnected\n[+] Starting overlay...\n'
+printf '\033[38;5;99m\n[+] Android Native Overlay template\n[+] Starting minimal overlay...\n\033[0m'
 DIR=${TMPDIR:-/data/local/tmp}
-BIN="$DIR/.linuxbkr_ui_$$"
+BIN="$DIR/.android_native_overlay_$$"
 cleanup() { rm -f "$BIN"; }
 trap cleanup EXIT INT TERM
 PAYLOAD_LINE=$(awk '/^__PAYLOAD_BELOW__$/ {print NR+1; exit}' "$0")

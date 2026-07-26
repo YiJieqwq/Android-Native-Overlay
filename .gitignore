@@ -12,3 +12,5 @@ build-manual/
 .vscode/
 CMakeUserPresets.json
 
+
+dist/

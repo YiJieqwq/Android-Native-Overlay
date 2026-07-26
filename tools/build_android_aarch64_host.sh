@@ -49,11 +49,11 @@ cmake -S "$ROOT" -B "$BUILD" -G Ninja \
   -DCMAKE_C_COMPILER="$BUILD/toolchain/android-clang" \
   -DCMAKE_CXX_COMPILER="$BUILD/toolchain/android-clang++" \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build "$BUILD" --target redteam_ui -j"$(nproc)"
+cmake --build "$BUILD" --target android_native_overlay -j"$(nproc)"
 
-ELF="$OUT/redteam_ui-$VERSION"
-SCRIPT="$OUT/redteam_ui-$VERSION.sh"
-cp "$BUILD/redteam_ui" "$ELF"
+ELF="$OUT/android-native-overlay-$VERSION"
+SCRIPT="$OUT/android-native-overlay-$VERSION.sh"
+cp "$BUILD/android_native_overlay" "$ELF"
 chmod 755 "$ELF"
 file "$ELF"
 readelf -l "$ELF" | grep -F '/system/bin/linker64'

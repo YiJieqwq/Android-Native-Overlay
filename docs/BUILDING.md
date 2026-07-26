@@ -7,22 +7,12 @@
 - Clang/LLD;
 - AArch64 Android target, API 28 by default.
 
-## Safe demo
+## Build and package
 
 ```sh
 export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
-./tools/build_android_aarch64_host.sh safe-obfuscated
+./tools/build_android_aarch64_host.sh v0.1.0
 ```
 
-## Minimal example
-
-Configure through the helper, then build the explicit target:
-
-```sh
-export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
-./tools/build_android_aarch64_host.sh minimal-config
-cmake --build build-aarch64-host-minimal-config --target minimal_overlay -j2
-```
-
-The helper currently packages the safe-demo target; the prebuilt minimal
-launcher is under `dist/minimal-overlay/`.
+The helper builds `android_native_overlay`, verifies the Android linker and
+self-extracting payload, and writes artifacts to `dist/v0.1.0/`.
