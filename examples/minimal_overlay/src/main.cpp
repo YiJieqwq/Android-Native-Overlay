@@ -1,5 +1,3 @@
-#include <algorithm>
-#include <cmath>
 #include "draw.h"
 #include "GraphicsManager.h"
 
@@ -10,30 +8,20 @@ int main(int, char **) {
     if (displayInfo.width <= 0 || displayInfo.height <= 0) return 3;
     abs_ScreenX = displayInfo.width;
     abs_ScreenY = displayInfo.height;
+    native_window_screen_x = abs_ScreenX;
+    native_window_screen_y = abs_ScreenY;
+    surface_screen_x = 0.0f;
+    surface_screen_y = 0.0f;
 
-    constexpr float base_w = 900.0f;
-    constexpr float producer_h = 828.0f; // 64px hint + 700px panel + 64px handles.
-    const float maximum_scale = std::min(
-        (abs_ScreenX - 16.0f) / base_w,
-        (abs_ScreenY - 16.0f) / producer_h);
-    const float initial_scale = std::min(1.0f, maximum_scale);
-    const int producer_w = std::max(1, (int)std::lround(base_w * maximum_scale));
-    const int producer_height = std::max(1, (int)std::lround(producer_h * maximum_scale));
-    native_window_screen_x = std::max(1, (int)std::lround(base_w * initial_scale));
-    native_window_screen_y = std::max(1, (int)std::lround(producer_h * initial_scale));
-    surface_screen_x = (abs_ScreenX - native_window_screen_x) * 0.5f;
-    surface_screen_y = (abs_ScreenY - native_window_screen_y) * 0.5f;
-
-    // Allocate one maximum-size producer. Runtime proportional resize only
-    // changes SurfaceControl crop/position and ImGui scale, so it is immediate
-    // and does not churn EGL surfaces.
+    // Match the original imgui_template approach: keep one full-display native
+    // producer and resize/move only the ImGui window inside it. This avoids
+    // clipping content when SurfaceControl crop becomes smaller than the EGL
+    // framebuffer and makes resize updates visible in the same frame.
     window = android::ANativeWindowCreator::Create(
-        "Android Native Overlay Template", producer_w, producer_height, false);
+        "Android Native Overlay Template", abs_ScreenX, abs_ScreenY, false);
     if (!window) return 4;
-    android::ANativeWindowCreator::SetPosition(window, surface_screen_x, surface_screen_y);
-    android::ANativeWindowCreator::SetVisibleCrop(
-        window, native_window_screen_x, native_window_screen_y);
-    if (!graphics->Init_Render(window, producer_w, producer_height)) return 5;
+    android::ANativeWindowCreator::SetPosition(window, 0.0f, 0.0f);
+    if (!graphics->Init_Render(window, abs_ScreenX, abs_ScreenY)) return 5;
     if (!Touch::Init({(float)abs_ScreenX, (float)abs_ScreenY}, true)) return 6;
     init_My_drawdata();
 

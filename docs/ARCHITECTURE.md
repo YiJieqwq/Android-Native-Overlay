@@ -18,9 +18,11 @@
 - `tools/`: NDK build and self-extracting shell packaging.
 - `docs/`: architecture, build, touch, and platform notes.
 
-## Surface resize
+## Full-display host and window resize
 
-Some OEMs report success from `ANativeWindow_setBuffersGeometry()` without
-changing the compositor surface. The example creates an exact-size replacement
-SurfaceControl and rebinds the existing EGL context through
-`ReplaceNativeWindow()`.
+The minimal example follows the original `imgui_template` model: one transparent
+full-display ANativeWindow/EGL framebuffer remains stable while the visible
+ImGui glass panel moves and resizes inside it. This avoids clipping caused by
+shrinking SurfaceControl crop without resizing the EGL framebuffer. Both lower
+handles update the ImGui window geometry immediately and preserve a 900:700
+aspect ratio.

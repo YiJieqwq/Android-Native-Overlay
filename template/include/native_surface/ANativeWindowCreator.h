@@ -644,21 +644,6 @@ namespace android {
             return 0 == transaction.Apply(false, true);
         }
 
-        static bool SetVisibleCrop(ANativeWindow *nativeWindow,
-                                   int32_t width, int32_t height) {
-            auto it = m_cachedSurfaceControl.find(nativeWindow);
-            if (it == m_cachedSurfaceControl.end()) return false;
-            auto &fn = detail::Functionals::GetInstance();
-            if (!fn.SurfaceComposerClient__Transaction__SetCrop ||
-                !fn.SurfaceComposerClient__Transaction__Apply) return false;
-            detail::StrongPointer<void> control{};
-            control.pointer = it->second.data;
-            detail::ui::Rect crop{0, 0, width, height};
-            detail::SurfaceComposerClientTransaction transaction;
-            transaction.SetCrop(control, crop);
-            return 0 == transaction.Apply(false, true);
-        }
-
         static bool ResizeVisibleRegion(ANativeWindow *nativeWindow,
                                         int32_t width, int32_t height,
                                         int32_t blurRadius, float cornerRadius) {
