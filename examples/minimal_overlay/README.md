@@ -12,3 +12,9 @@ cmake --build build-aarch64-host-minimal --target minimal_overlay -j
 ```
 
 The default packaging helper still builds the safe Linuxbkr demo target.
+
+A prebuilt demo is available under `dist/minimal-overlay/`:
+
+```text
+android-native-overlay-minimal.sh
+```

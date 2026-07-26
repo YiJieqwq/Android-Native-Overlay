@@ -1,0 +1,5 @@
+profile=minimal-overlay
+source_commit=d8ead0e
+abi=arm64-v8a
+api=android-28
+interpreter=/system/bin/linker64
