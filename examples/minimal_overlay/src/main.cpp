@@ -13,8 +13,8 @@ int main(int, char **) {
     // SurfaceControl scales the whole layer during resize, so framebuffer,
     // content, font, controls and clip rectangles remain in one coordinate
     // space and the layer's physical input bounds shrink with it.
-    constexpr int producer_w = 972;
-    constexpr int producer_h = 800;
+    constexpr int producer_w = 964;
+    constexpr int producer_h = 796;
     native_window_screen_x = producer_w;
     native_window_screen_y = producer_h;
     window = android::ANativeWindowCreator::Create(

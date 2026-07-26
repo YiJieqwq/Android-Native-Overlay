@@ -19,12 +19,12 @@ float surface_screen_x = 0.0f, surface_screen_y = 0.0f;
 namespace {
 using Clock = std::chrono::steady_clock;
 constexpr float kBaseWidth = 900.0f;
-constexpr float kSideMargin = 36.0f;
+constexpr float kSideMargin = 32.0f;
 constexpr float kProducerWidth = kSideMargin + kBaseWidth + kSideMargin;
 constexpr float kBaseHeight = 700.0f;
 constexpr float kTitleHeight = 68.0f;
 constexpr float kTopMargin = 64.0f;
-constexpr float kBottomMargin = 36.0f;
+constexpr float kBottomMargin = 32.0f;
 constexpr float kProducerHeight = kTopMargin + kBaseHeight + kBottomMargin;
 constexpr float kMinScale = 0.56f;
 Clock::time_point last_display_query{};
@@ -180,19 +180,27 @@ void Layout_tick_UI(bool *running) {
         ImGui::TextUnformatted("Drag either outer corner for proportional resize.");
         ImGui::EndChild();
 
-        constexpr float handle=32;
-        constexpr float gap=4;
-        const float hy=kTopMargin+kBaseHeight+gap;
-        ImGui::SetCursorPos({kSideMargin-handle-4,hy});
-        ImGui::InvisibleButton("##resize_left",{handle,handle});
+        // HyperOS-like corner affordances: visual triangles sit two pixels
+        // outside the glass corners, while the invisible hit target is a much
+        // larger 60x60 square. TouchHelper applies an equivalent circular gate.
+        constexpr float hit=60;
+        const float corner_y=kTopMargin+kBaseHeight+2;
+        const ImVec2 left_center(kSideMargin-2,corner_y);
+        const ImVec2 right_center(kSideMargin+kBaseWidth+2,corner_y);
+        ImGui::SetCursorPos({left_center.x-hit*.5f,left_center.y-hit*.5f});
+        ImGui::InvisibleButton("##resize_left",{hit,hit});
         bool left=ImGui::IsItemActivated();
-        ImVec2 lmin=ImGui::GetItemRectMin(),lmax=ImGui::GetItemRectMax();
-        dl->AddTriangleFilled({lmin.x+4,lmax.y-4},{lmin.x+4,lmax.y-28},{lmin.x+28,lmax.y-4},IM_COL32(170,184,215,230));
-        ImGui::SetCursorPos({kSideMargin+kBaseWidth+4,hy});
-        ImGui::InvisibleButton("##resize_right",{handle,handle});
+        // Isosceles right triangle; the 90-degree vertex points down-left.
+        dl->AddTriangleFilled({left_center.x-12,left_center.y+12},
+                              {left_center.x-12,left_center.y-12},
+                              {left_center.x+12,left_center.y+12},IM_COL32(170,184,215,230));
+        ImGui::SetCursorPos({right_center.x-hit*.5f,right_center.y-hit*.5f});
+        ImGui::InvisibleButton("##resize_right",{hit,hit});
         bool right=ImGui::IsItemActivated();
-        ImVec2 rmin=ImGui::GetItemRectMin(),rmax=ImGui::GetItemRectMax();
-        dl->AddTriangleFilled({rmax.x-4,rmax.y-4},{rmax.x-28,rmax.y-4},{rmax.x-4,rmax.y-28},IM_COL32(170,184,215,230));
+        // Mirrored isosceles right triangle; 90-degree vertex down-right.
+        dl->AddTriangleFilled({right_center.x+12,right_center.y+12},
+                              {right_center.x-12,right_center.y+12},
+                              {right_center.x+12,right_center.y-12},IM_COL32(170,184,215,230));
 
         if(left||right){
             resize_mode=left?ResizeMode::LeftBottom:ResizeMode::RightBottom;
@@ -240,9 +248,11 @@ void Layout_tick_UI(bool *running) {
     float glass_y=surface_screen_y+kTopMargin*sc;
     float glass_h_px=(collapsed?kTitleHeight:kBaseHeight)*sc;
     float glass_x=surface_screen_x+kSideMargin*sc;
-    My_Vector2 pos[3]={{glass_x,glass_y},
-        {glass_x-(32+4)*sc,glass_y+glass_h_px},
-        {glass_x+(kBaseWidth+4)*sc,glass_y+glass_h_px}};
-    My_Vector2 size[3]={{kBaseWidth*sc,glass_h_px},{32*sc,32*sc},{32*sc,32*sc}};
-    Touch::SetTouchObstacle(pos,size,collapsed?1:3);
+    My_Vector2 glass_pos(glass_x,glass_y);
+    My_Vector2 glass_size(kBaseWidth*sc,glass_h_px);
+    Touch::SetTouchObstacle(&glass_pos,&glass_size,1);
+    My_Vector2 circle_center[2]={{glass_x-2*sc,glass_y+glass_h_px+2*sc},
+        {glass_x+(kBaseWidth+2)*sc,glass_y+glass_h_px+2*sc}};
+    float circle_radius[2]={30*sc,30*sc};
+    Touch::SetTouchCircles(circle_center,circle_radius,collapsed?0:2);
 }

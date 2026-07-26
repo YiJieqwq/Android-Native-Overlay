@@ -7,6 +7,7 @@
 #include <vector>
 #include <thread>
 #include <unordered_map>
+#include <algorithm>
 #include "spinlock.h"
 #include "imgui.h"
 #include "TouchHelperA.h"
@@ -44,6 +45,9 @@ namespace Touch {
     static My_Vector2 g_WindowPos[100];
     static My_Vector2 g_WindowSize[100];
     static int g_WindowCount = 0;
+    static My_Vector2 g_CircleCenter[16];
+    static float g_CircleRadius[16];
+    static int g_CircleCount = 0;
 
     void SetTouchObstacle(My_Vector2* pos, My_Vector2* size, int count) {
         lock.lock();
@@ -55,12 +59,28 @@ namespace Touch {
         lock.unlock();
     }
 
+    void SetTouchCircles(My_Vector2* centers, float* radii, int count) {
+        lock.lock();
+        g_CircleCount = std::clamp(count, 0, 16);
+        for (int i = 0; i < g_CircleCount; ++i) {
+            g_CircleCenter[i] = centers[i];
+            g_CircleRadius[i] = std::max(0.0f, radii[i]);
+        }
+        lock.unlock();
+    }
+
     bool CheckInWindow(const My_Vector2& pos) {
         for (int i = 0; i < g_WindowCount; ++i) {
             if (pos.x >= g_WindowPos[i].x && pos.x <= g_WindowPos[i].x + g_WindowSize[i].x &&
                 pos.y >= g_WindowPos[i].y && pos.y <= g_WindowPos[i].y + g_WindowSize[i].y) {
                 return true;
             }
+        }
+        for (int i = 0; i < g_CircleCount; ++i) {
+            const float dx = pos.x - g_CircleCenter[i].x;
+            const float dy = pos.y - g_CircleCenter[i].y;
+            if (dx * dx + dy * dy <= g_CircleRadius[i] * g_CircleRadius[i])
+                return true;
         }
         return false;
     }

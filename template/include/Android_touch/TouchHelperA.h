@@ -52,6 +52,9 @@ namespace Touch {
 
     // 设置窗口障碍坐标和大小
     void SetTouchObstacle(My_Vector2* pos, My_Vector2* size, int count);
+
+    // Optional circular hit regions for controls drawn outside rectangular UI.
+    void SetTouchCircles(My_Vector2* centers, float* radii, int count);
     
     // 检测坐标是否落入任何一个窗口内部
     bool CheckInWindow(const My_Vector2& pos);

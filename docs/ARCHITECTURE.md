@@ -20,12 +20,16 @@
 
 ## Fixed logical producer and live layer transform
 
-The example keeps a fixed 972x800 EGL producer: a 900x700 glass panel, a
-64-pixel transparent strip above for the size hint, and compact 36-pixel side
+The example keeps a fixed 964x796 EGL producer: a 900x700 glass panel, a
+64-pixel transparent strip above for the size hint, and compact 32-pixel side
 and lower margins for resize handles. The glass content is rendered inside a
 clipped child region, so transparent control margins never affect content
 alignment. ImGui always renders the complete logical scene, so no widget or
 text is clipped during resize.
+
+Touch latching uses one rectangular glass region plus two 30-pixel-radius
+circles centered on the lower corner affordances. Transparent producer margins
+outside those regions are not treated as overlay controls.
 
 Live proportional resize applies a SurfaceControl matrix and crop to the whole
 layer. SurfaceFlinger therefore scales framebuffer content and input bounds
