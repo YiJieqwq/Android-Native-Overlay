@@ -351,11 +351,9 @@ namespace android {
                     return nullptr;
 
                 auto result = Functionals::GetInstance().SurfaceControl__GetSurface(data);
-                // Android MTE/TBI may return a tagged native pointer. The
-                // private Surface wrapper arithmetic below must operate on the
-                // untagged address or bionic aborts during ANativeWindow release.
-                constexpr uintptr_t kPointerMask = 0x00FFFFFFFFFFFFFFULL;
-                const uintptr_t raw = reinterpret_cast<uintptr_t>(result.pointer) & kPointerMask;
+                // Preserve Android's top-byte pointer tag while moving from the
+                // private sp<Surface> wrapper payload to the ANativeWindow view.
+                const uintptr_t raw = reinterpret_cast<uintptr_t>(result.pointer);
                 return reinterpret_cast<Surface *>(raw + sizeof(std::max_align_t) / 2);
             }
 
@@ -370,9 +368,14 @@ namespace android {
                 if (nullptr == data || nullptr == surface)
                     return;
 
-                Functionals::GetInstance().RefBase__DecStrong(reinterpret_cast<Surface *>(reinterpret_cast<size_t>(surface) - sizeof(std::max_align_t) / 2), this);
+                // getSurface() returns an ANativeWindow-backed strong reference.
+                // Balance it through the public NDK API so tagged-pointer state is
+                // preserved by bionic instead of manually reconstructing a RefBase
+                // pointer and calling decStrong on an address with a truncated tag.
+                ANativeWindow_release(reinterpret_cast<ANativeWindow *>(surface));
                 DisConnect();
                 Functionals::GetInstance().RefBase__DecStrong(data, this);
+                data = nullptr;
             }
         };
 

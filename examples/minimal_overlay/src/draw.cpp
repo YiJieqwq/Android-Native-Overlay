@@ -77,13 +77,17 @@ void Layout_tick_UI(bool *running) {
     ImGui::SetNextWindowPos({0.0f, 0.0f}, ImGuiCond_Always);
     ImGui::SetNextWindowSize({width, height}, ImGuiCond_Always);
     ImGui::Begin("##minimal_overlay", nullptr,
-                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                 ImGuiWindowFlags_NoSavedSettings);
 
-    // Keep the top region visually integrated with the panel. It remains an
-    // invisible drag target instead of drawing a separate title-bar strip.
+    // Hide ImGui's built-in title bar and draw one custom bar at the correct
+    // panel origin; this avoids the extra strip that previously covered it.
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const ImVec2 panel_pos = ImGui::GetWindowPos();
+    dl->AddRectFilled(panel_pos, {panel_pos.x + width, panel_pos.y + 68.0f},
+                      IM_COL32(49, 74, 121, 255), 18.0f,
+                      ImDrawFlags_RoundCornersTop);
     dl->AddText({panel_pos.x + 24.0f, panel_pos.y + 20.0f},
                 IM_COL32(245, 247, 252, 255), "Android Native Overlay");
 
