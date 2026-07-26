@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <memory>
+#include <algorithm>
 #include <unistd.h>
 #include "draw.h"
 #include "GraphicsManager.h"
@@ -29,6 +30,30 @@ int main(int, char **) {
         graphics->NewFrame(true);
         Layout_tick_UI(&running);
         graphics->EndFrame();
+
+        if (requested_surface_height > 0) {
+            const int target_height = requested_surface_height;
+            ANativeWindow *replacement = android::ANativeWindowCreator::Create(
+                "Android Native Overlay Template resized",
+                native_window_screen_x, target_height, false);
+            bool rebound = false;
+            if (replacement) {
+                android::ANativeWindowCreator::SetPosition(
+                    replacement, surface_screen_x, surface_screen_y);
+                rebound = graphics->ReplaceNativeWindow(
+                    replacement, (float)native_window_screen_x,
+                    (float)target_height);
+            }
+            if (rebound) {
+                ANativeWindow *old = window;
+                window = replacement;
+                native_window_screen_y = target_height;
+                android::ANativeWindowCreator::Destroy(old);
+            } else if (replacement) {
+                android::ANativeWindowCreator::Destroy(replacement);
+            }
+            requested_surface_height = 0;
+        }
     }
     Touch::Close();
     graphics->Shutdown();
