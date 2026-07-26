@@ -33,6 +33,10 @@ int main(int, char **) {
 
         if (requested_surface_height > 0) {
             const int target_height = requested_surface_height;
+            surface_screen_x = std::clamp(surface_screen_x, 0.0f,
+                (float)std::max(0, abs_ScreenX - native_window_screen_x));
+            surface_screen_y = std::clamp(surface_screen_y, 0.0f,
+                (float)std::max(0, abs_ScreenY - target_height));
             ANativeWindow *replacement = android::ANativeWindowCreator::Create(
                 "Android Native Overlay Template resized",
                 native_window_screen_x, target_height, false);

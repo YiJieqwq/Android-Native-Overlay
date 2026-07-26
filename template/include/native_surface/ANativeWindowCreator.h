@@ -7,6 +7,7 @@
 #include <sys/system_properties.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -350,8 +351,12 @@ namespace android {
                     return nullptr;
 
                 auto result = Functionals::GetInstance().SurfaceControl__GetSurface(data);
-
-                return reinterpret_cast<Surface *>(reinterpret_cast<size_t>(result.pointer) + sizeof(std::max_align_t) / 2);
+                // Android MTE/TBI may return a tagged native pointer. The
+                // private Surface wrapper arithmetic below must operate on the
+                // untagged address or bionic aborts during ANativeWindow release.
+                constexpr uintptr_t kPointerMask = 0x00FFFFFFFFFFFFFFULL;
+                const uintptr_t raw = reinterpret_cast<uintptr_t>(result.pointer) & kPointerMask;
+                return reinterpret_cast<Surface *>(raw + sizeof(std::max_align_t) / 2);
             }
 
             void DisConnect() {
