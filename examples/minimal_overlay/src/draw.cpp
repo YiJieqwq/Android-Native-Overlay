@@ -19,10 +19,13 @@ float surface_screen_x = 0.0f, surface_screen_y = 0.0f;
 namespace {
 using Clock = std::chrono::steady_clock;
 constexpr float kBaseWidth = 900.0f;
+constexpr float kSideMargin = 64.0f;
+constexpr float kProducerWidth = kSideMargin + kBaseWidth + kSideMargin;
 constexpr float kBaseHeight = 700.0f;
 constexpr float kTitleHeight = 68.0f;
-constexpr float kHintMargin = 64.0f;
-constexpr float kHandleMargin = 64.0f;
+constexpr float kTopMargin = 64.0f;
+constexpr float kBottomMargin = 64.0f;
+constexpr float kProducerHeight = kTopMargin + kBaseHeight + kBottomMargin;
 constexpr float kMinScale = 0.56f;
 Clock::time_point last_display_query{};
 unsigned int last_sequence = 0;
@@ -32,13 +35,26 @@ enum class ResizeMode { None, LeftBottom, RightBottom };
 ResizeMode resize_mode = ResizeMode::None;
 float touch_x = -1.0f, touch_y = -1.0f;
 bool touch_down = false;
-float panel_x = 0.0f, panel_y = 0.0f;
-float panel_scale = 1.0f;
+float layer_scale = 1.0f;
 float resize_start_scale = 1.0f;
 float resize_touch_start_x = 0.0f, resize_touch_start_y = 0.0f;
 float resize_fixed_x = 0.0f, resize_fixed_y = 0.0f;
 ImVec2 drag_touch_start{};
-ImVec2 drag_panel_start{};
+ImVec2 drag_surface_start{};
+
+int LogicalLayerHeight() {
+    return (int)std::lround(kTopMargin +
+        (collapsed ? kTitleHeight : kBaseHeight + kBottomMargin));
+}
+void ApplyLayerGeometry() {
+    const int crop_h = LogicalLayerHeight();
+    const int layer_w = std::max(1, (int)std::lround(kProducerWidth * layer_scale));
+    const int layer_h = std::max(1, (int)std::lround(crop_h * layer_scale));
+    native_window_screen_x = layer_w;
+    native_window_screen_y = layer_h;
+    android::ANativeWindowCreator::SetLayerGeometry(
+        window, (int)kProducerWidth, crop_h, layer_scale);
+}
 }
 
 void init_My_drawdata() {
@@ -49,16 +65,18 @@ void init_My_drawdata() {
     if (!io.FontDefault) io.FontDefault = io.Fonts->AddFontDefault();
     ImGui::StyleColorsDark();
     ImGuiStyle &style = ImGui::GetStyle();
-    style.WindowPadding = {0.0f, 0.0f};
-    style.WindowBorderSize = 0.0f;
+    style.WindowPadding = {0, 0};
+    style.WindowBorderSize = 0;
     style.Colors[ImGuiCol_WindowBg] = {0, 0, 0, 0};
 
-    const float fit = std::min({1.0f,
-        (abs_ScreenX - 32.0f) / kBaseWidth,
-        (abs_ScreenY - 32.0f) / (kBaseHeight + kHintMargin + kHandleMargin)});
-    panel_scale = std::max(kMinScale, fit);
-    panel_x = (abs_ScreenX - kBaseWidth * panel_scale) * .5f;
-    panel_y = (abs_ScreenY - kBaseHeight * panel_scale) * .5f;
+    layer_scale = std::min({1.0f,
+        (abs_ScreenX - 16.0f) / kProducerWidth,
+        (abs_ScreenY - 32.0f) / kProducerHeight});
+    layer_scale = std::max(kMinScale, layer_scale);
+    ApplyLayerGeometry();
+    surface_screen_x = (abs_ScreenX - native_window_screen_x) * .5f;
+    surface_screen_y = (abs_ScreenY - native_window_screen_y) * .5f;
+    android::ANativeWindowCreator::SetPosition(window, surface_screen_x, surface_screen_y);
 }
 
 void screen_config() {
@@ -81,152 +99,143 @@ void drawBegin() {
         touch_y = snapshot.y;
         touch_down = snapshot.down;
         io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
-        io.AddMousePosEvent(snapshot.x, snapshot.y);
+        io.AddMousePosEvent((snapshot.x - surface_screen_x) / layer_scale,
+                            (snapshot.y - surface_screen_y) / layer_scale);
         io.AddMouseButtonEvent(0, snapshot.down);
     }
 }
 
 void Layout_tick_UI(bool *running) {
-    const float s = panel_scale;
-    const float panel_w = kBaseWidth * s;
-    const float panel_h = (collapsed ? kTitleHeight : kBaseHeight) * s;
-    const float top_margin = kHintMargin * s;
-    const float bottom_margin = collapsed ? 0.0f : kHandleMargin * s;
-    const float host_y = panel_y - top_margin;
-    const float host_h = top_margin + panel_h + bottom_margin;
-    const float title_h = kTitleHeight * s;
-
-    ImGui::SetNextWindowPos({panel_x, host_y}, ImGuiCond_Always);
-    ImGui::SetNextWindowSize({panel_w, host_h}, ImGuiCond_Always);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0.0f, 0.0f});
+    ImGui::SetNextWindowPos({0, 0}, ImGuiCond_Always);
+    ImGui::SetNextWindowSize({kProducerWidth, (float)LogicalLayerHeight()}, ImGuiCond_Always);
     ImGui::Begin("##overlay_host", nullptr,
-                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-                 ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings);
-    ImGui::SetWindowFontScale(s);
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings);
 
     ImDrawList *dl = ImGui::GetWindowDrawList();
-    const ImVec2 glass_min(panel_x, panel_y);
-    const ImVec2 glass_max(panel_x + panel_w, panel_y + panel_h);
-    dl->AddRectFilled(glass_min, glass_max, IM_COL32(9, 11, 18, 240), 18.0f * s);
-    dl->AddRectFilled(glass_min, {glass_max.x, glass_min.y + title_h},
-                      IM_COL32(49, 74, 121, 255), 18.0f * s,
-                      collapsed ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersTop);
-    dl->AddText({glass_min.x + 24.0f * s, glass_min.y + 20.0f * s},
-                IM_COL32(245, 247, 252, 255), "Android Native Overlay");
+    const float glass_h = collapsed ? kTitleHeight : kBaseHeight;
+    const ImVec2 glass_min(kSideMargin, kTopMargin);
+    const ImVec2 glass_max(kSideMargin + kBaseWidth, kTopMargin + glass_h);
+    dl->AddRectFilled(glass_min, glass_max, IM_COL32(9, 11, 18, 240), 18.0f);
+    dl->AddRectFilled(glass_min, {kSideMargin + kBaseWidth, kTopMargin + kTitleHeight},
+        IM_COL32(49, 74, 121, 255), 18.0f,
+        collapsed ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersTop);
+    dl->AddText({kSideMargin + 24, kTopMargin + 20}, IM_COL32(245,247,252,255),
+                "Android Native Overlay");
 
-    ImGui::SetCursorPos({8.0f * s, top_margin + 8.0f * s});
-    ImGui::InvisibleButton("##drag", {panel_w - 168.0f * s, 52.0f * s});
+    ImGui::SetCursorPos({kSideMargin + 8, kTopMargin + 8});
+    ImGui::InvisibleButton("##drag", {kBaseWidth - 168, 52});
     if (ImGui::IsItemActivated()) {
         dragging = true;
         drag_touch_start = {touch_x, touch_y};
-        drag_panel_start = {panel_x, panel_y};
+        drag_surface_start = {surface_screen_x, surface_screen_y};
     }
     if (dragging && touch_down) {
-        panel_x = std::clamp(drag_panel_start.x + touch_x - drag_touch_start.x,
-                             0.0f, (float)abs_ScreenX - panel_w);
-        panel_y = std::clamp(drag_panel_start.y + touch_y - drag_touch_start.y,
-                             top_margin, (float)abs_ScreenY - panel_h - bottom_margin);
+        surface_screen_x = std::clamp(
+            drag_surface_start.x + touch_x - drag_touch_start.x,
+            0.0f, (float)std::max(0, abs_ScreenX-native_window_screen_x));
+        surface_screen_y = std::clamp(
+            drag_surface_start.y + touch_y - drag_touch_start.y,
+            0.0f, (float)std::max(0, abs_ScreenY-native_window_screen_y));
+        android::ANativeWindowCreator::SetPosition(window,surface_screen_x,surface_screen_y);
     }
     if (dragging && !touch_down) dragging = false;
 
-    ImGui::SetCursorPos({panel_w - 146.0f * s, top_margin + 10.0f * s});
-    ImGui::InvisibleButton("##collapse", {54.0f * s, 48.0f * s});
-    ImVec2 cmin = ImGui::GetItemRectMin(), cmax = ImGui::GetItemRectMax();
-    dl->AddRectFilled(cmin, cmax, IM_COL32(35, 55, 94, 255), 10.0f * s);
-    ImVec2 cc((cmin.x + cmax.x) * .5f, (cmin.y + cmax.y) * .5f);
-    if (collapsed)
-        dl->AddTriangleFilled({cc.x - 10*s, cc.y - 6*s}, {cc.x + 10*s, cc.y - 6*s},
-                              {cc.x, cc.y + 7*s}, IM_COL32_WHITE);
-    else
-        dl->AddTriangleFilled({cc.x, cc.y - 7*s}, {cc.x - 10*s, cc.y + 6*s},
-                              {cc.x + 10*s, cc.y + 6*s}, IM_COL32_WHITE);
-    if (ImGui::IsItemClicked()) collapsed = !collapsed;
+    ImGui::SetCursorPos({kSideMargin+kBaseWidth-146,kTopMargin+10});
+    ImGui::InvisibleButton("##collapse",{54,48});
+    ImVec2 cmin=ImGui::GetItemRectMin(),cmax=ImGui::GetItemRectMax();
+    dl->AddRectFilled(cmin,cmax,IM_COL32(35,55,94,255),10);
+    ImVec2 cc((cmin.x+cmax.x)*.5f,(cmin.y+cmax.y)*.5f);
+    if(collapsed) dl->AddTriangleFilled({cc.x-10,cc.y-6},{cc.x+10,cc.y-6},{cc.x,cc.y+7},IM_COL32_WHITE);
+    else dl->AddTriangleFilled({cc.x,cc.y-7},{cc.x-10,cc.y+6},{cc.x+10,cc.y+6},IM_COL32_WHITE);
+    if(ImGui::IsItemClicked()) { collapsed=!collapsed; ApplyLayerGeometry(); }
 
-    ImGui::SetCursorPos({panel_w - 82.0f * s, top_margin + 10.0f * s});
-    ImGui::InvisibleButton("##close", {54.0f * s, 48.0f * s});
-    ImVec2 xmin = ImGui::GetItemRectMin(), xmax = ImGui::GetItemRectMax();
-    dl->AddRectFilled(xmin, xmax, IM_COL32(35, 55, 94, 255), 10.0f * s);
-    ImVec2 xc((xmin.x + xmax.x) * .5f, (xmin.y + xmax.y) * .5f);
-    dl->AddLine({xc.x-8*s,xc.y-8*s},{xc.x+8*s,xc.y+8*s},IM_COL32_WHITE,3*s);
-    dl->AddLine({xc.x+8*s,xc.y-8*s},{xc.x-8*s,xc.y+8*s},IM_COL32_WHITE,3*s);
-    if (ImGui::IsItemClicked()) *running = false;
+    ImGui::SetCursorPos({kSideMargin+kBaseWidth-82,kTopMargin+10});
+    ImGui::InvisibleButton("##close",{54,48});
+    ImVec2 xmin=ImGui::GetItemRectMin(),xmax=ImGui::GetItemRectMax();
+    dl->AddRectFilled(xmin,xmax,IM_COL32(35,55,94,255),10);
+    ImVec2 xc((xmin.x+xmax.x)*.5f,(xmin.y+xmax.y)*.5f);
+    dl->AddLine({xc.x-8,xc.y-8},{xc.x+8,xc.y+8},IM_COL32_WHITE,3);
+    dl->AddLine({xc.x+8,xc.y-8},{xc.x-8,xc.y+8},IM_COL32_WHITE,3);
+    if(ImGui::IsItemClicked()) *running=false;
 
-    if (!collapsed) {
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {12.0f*s, 12.0f*s});
-        ImGui::SetCursorPos({24.0f*s, top_margin + 92.0f*s});
-        ImGui::Text("Display: %d x %d", abs_ScreenX, abs_ScreenY);
+    if(!collapsed) {
+        ImGui::SetCursorPos({kSideMargin+24,kTopMargin+92});
+        ImGui::Text("Display: %d x %d",abs_ScreenX,abs_ScreenY);
         ImGui::Text("Window: %d x %d  Scale: %.2f",
-                    (int)std::lround(panel_w), (int)std::lround(panel_h), s);
+            (int)std::lround(kBaseWidth*layer_scale),
+            (int)std::lround(kBaseHeight*layer_scale),layer_scale);
         ImGui::Spacing();
         ImGui::TextUnformatted("SurfaceComposer + OpenGL ES 3 + Dear ImGui");
         ImGui::TextUnformatted("Touch: non-exclusive observer");
         ImGui::Spacing();
-        ImGui::TextUnformatted("Drag the top bar to move this overlay.");
-        ImGui::TextUnformatted("Drag either lower handle for proportional resize.");
-        ImGui::PopStyleVar();
+        ImGui::TextUnformatted("Drag the title bar to move.");
+        ImGui::TextUnformatted("Drag either outer corner for proportional resize.");
 
-        const float handle = 58.0f * s;
-        const float handle_y = top_margin + panel_h + 3.0f * s;
-        ImGui::SetCursorPos({0.0f, handle_y});
-        ImGui::InvisibleButton("##resize_left", {handle, handle});
-        const bool left_active = ImGui::IsItemActivated();
-        ImVec2 lmin=ImGui::GetItemRectMin(), lmax=ImGui::GetItemRectMax();
-        dl->AddTriangleFilled({lmin.x+8*s,lmax.y-8*s},{lmin.x+8*s,lmax.y-32*s},
-                              {lmin.x+32*s,lmax.y-8*s},IM_COL32(170,184,215,220));
+        constexpr float handle=52;
+        constexpr float gap=4;
+        const float hy=kTopMargin+kBaseHeight+gap;
+        ImGui::SetCursorPos({kSideMargin-handle-4,hy});
+        ImGui::InvisibleButton("##resize_left",{handle,handle});
+        bool left=ImGui::IsItemActivated();
+        ImVec2 lmin=ImGui::GetItemRectMin(),lmax=ImGui::GetItemRectMax();
+        dl->AddTriangleFilled({lmin.x+4,lmax.y-4},{lmin.x+4,lmax.y-28},{lmin.x+28,lmax.y-4},IM_COL32(170,184,215,230));
+        ImGui::SetCursorPos({kSideMargin+kBaseWidth+4,hy});
+        ImGui::InvisibleButton("##resize_right",{handle,handle});
+        bool right=ImGui::IsItemActivated();
+        ImVec2 rmin=ImGui::GetItemRectMin(),rmax=ImGui::GetItemRectMax();
+        dl->AddTriangleFilled({rmax.x-4,rmax.y-4},{rmax.x-28,rmax.y-4},{rmax.x-4,rmax.y-28},IM_COL32(170,184,215,230));
 
-        ImGui::SetCursorPos({panel_w - handle, handle_y});
-        ImGui::InvisibleButton("##resize_right", {handle, handle});
-        const bool right_active = ImGui::IsItemActivated();
-        ImVec2 rmin=ImGui::GetItemRectMin(), rmax=ImGui::GetItemRectMax();
-        dl->AddTriangleFilled({rmax.x-8*s,rmax.y-8*s},{rmax.x-32*s,rmax.y-8*s},
-                              {rmax.x-8*s,rmax.y-32*s},IM_COL32(170,184,215,220));
-
-        if (left_active || right_active) {
-            resize_mode = left_active ? ResizeMode::LeftBottom : ResizeMode::RightBottom;
-            resize_start_scale = panel_scale;
-            resize_touch_start_x = touch_x;
-            resize_touch_start_y = touch_y;
-            resize_fixed_x = resize_mode == ResizeMode::LeftBottom ? panel_x + panel_w : panel_x;
-            resize_fixed_y = panel_y;
+        if(left||right){
+            resize_mode=left?ResizeMode::LeftBottom:ResizeMode::RightBottom;
+            resize_start_scale=layer_scale;
+            resize_touch_start_x=touch_x; resize_touch_start_y=touch_y;
+            resize_fixed_x=resize_mode==ResizeMode::LeftBottom
+                ?surface_screen_x+(kSideMargin+kBaseWidth)*layer_scale
+                :surface_screen_x+kSideMargin*layer_scale;
+            resize_fixed_y=surface_screen_y;
         }
-        if (resize_mode != ResizeMode::None && touch_down) {
-            const float dx = touch_x - resize_touch_start_x;
-            const float dy = touch_y - resize_touch_start_y;
-            const float sign = resize_mode == ResizeMode::LeftBottom ? -1.0f : 1.0f;
-            const float projected = ((sign*dx)*kBaseWidth + dy*kBaseHeight) /
-                (kBaseWidth*kBaseWidth + kBaseHeight*kBaseHeight);
-            const float max_x = resize_mode == ResizeMode::LeftBottom
-                ? resize_fixed_x/kBaseWidth : (abs_ScreenX-resize_fixed_x)/kBaseWidth;
-            const float max_y = (abs_ScreenY-resize_fixed_y) /
-                                (kBaseHeight+kHandleMargin);
-            panel_scale = std::clamp(resize_start_scale + projected, kMinScale,
-                                     std::max(kMinScale, std::min(max_x,max_y)));
-            const float new_w = kBaseWidth * panel_scale;
-            panel_x = resize_mode == ResizeMode::LeftBottom ? resize_fixed_x-new_w : resize_fixed_x;
-            panel_y = resize_fixed_y;
+        if(resize_mode!=ResizeMode::None&&touch_down){
+            float dx=touch_x-resize_touch_start_x,dy=touch_y-resize_touch_start_y;
+            float sign=resize_mode==ResizeMode::LeftBottom?-1.0f:1.0f;
+            float projected=((sign*dx)*kBaseWidth+dy*kBaseHeight)/
+                (kBaseWidth*kBaseWidth+kBaseHeight*kBaseHeight);
+            float maxx=abs_ScreenX/kProducerWidth;
+            float maxy=(abs_ScreenY-resize_fixed_y)/kProducerHeight;
+            layer_scale=std::clamp(resize_start_scale+projected,kMinScale,
+                std::max(kMinScale,std::min(maxx,maxy)));
+            if(resize_mode==ResizeMode::LeftBottom)
+                surface_screen_x=resize_fixed_x-(kSideMargin+kBaseWidth)*layer_scale;
+            else surface_screen_x=resize_fixed_x-kSideMargin*layer_scale;
+            surface_screen_x=std::clamp(surface_screen_x,0.0f,
+                (float)abs_ScreenX-kProducerWidth*layer_scale);
+            surface_screen_y=resize_fixed_y;
+            ApplyLayerGeometry();
+            android::ANativeWindowCreator::SetPosition(window,surface_screen_x,surface_screen_y);
         }
-        if (resize_mode != ResizeMode::None && !touch_down) resize_mode = ResizeMode::None;
+        if(resize_mode!=ResizeMode::None&&!touch_down) resize_mode=ResizeMode::None;
     }
 
-    if (resize_mode != ResizeMode::None) {
+    if(resize_mode!=ResizeMode::None){
         char label[32];
         std::snprintf(label,sizeof(label),"%d × %d",
-                      (int)std::lround(kBaseWidth*panel_scale),
-                      (int)std::lround(kBaseHeight*panel_scale));
+            (int)std::lround(kBaseWidth*layer_scale),(int)std::lround(kBaseHeight*layer_scale));
         ImVec2 ts=ImGui::CalcTextSize(label);
-        ImVec2 p(panel_x+(kBaseWidth*panel_scale-ts.x)*.5f, panel_y-kHintMargin*panel_scale*.68f);
-        dl->AddRectFilled({p.x-16*s,p.y-8*s},{p.x+ts.x+16*s,p.y+ts.y+8*s},
-                          IM_COL32(18,21,29,220),16*s);
+        ImVec2 p(kSideMargin+(kBaseWidth-ts.x)*.5f,18);
+        dl->AddRectFilled({p.x-16,p.y-8},{p.x+ts.x+16,p.y+ts.y+8},IM_COL32(18,21,29,220),16);
         dl->AddText(p,IM_COL32_WHITE,label);
     }
 
     ImGui::End();
-    ImGui::PopStyleVar(2);
 
-    My_Vector2 obstacle_pos[3]={{panel_x,panel_y},
-        {panel_x,panel_y+panel_h},{panel_x+panel_w-58*s,panel_y+panel_h}};
-    My_Vector2 obstacle_size[3]={{panel_w,panel_h},{58*s,61*s},{58*s,61*s}};
-    Touch::SetTouchObstacle(obstacle_pos,obstacle_size,collapsed?1:3);
+    float sc=layer_scale;
+    float glass_y=surface_screen_y+kTopMargin*sc;
+    float glass_h_px=(collapsed?kTitleHeight:kBaseHeight)*sc;
+    float glass_x=surface_screen_x+kSideMargin*sc;
+    My_Vector2 pos[3]={{glass_x,glass_y},
+        {glass_x-(52+4)*sc,glass_y+glass_h_px},
+        {glass_x+(kBaseWidth+4)*sc,glass_y+glass_h_px}};
+    My_Vector2 size[3]={{kBaseWidth*sc,glass_h_px},{52*sc,56*sc},{52*sc,56*sc}};
+    Touch::SetTouchObstacle(pos,size,collapsed?1:3);
 }

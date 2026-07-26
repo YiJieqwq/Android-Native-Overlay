@@ -8,27 +8,26 @@ int main(int, char **) {
     if (displayInfo.width <= 0 || displayInfo.height <= 0) return 3;
     abs_ScreenX = displayInfo.width;
     abs_ScreenY = displayInfo.height;
-    native_window_screen_x = abs_ScreenX;
-    native_window_screen_y = abs_ScreenY;
-    surface_screen_x = 0.0f;
-    surface_screen_y = 0.0f;
 
-    // Match the original imgui_template approach: keep one full-display native
-    // producer and resize/move only the ImGui window inside it. This avoids
-    // clipping content when SurfaceControl crop becomes smaller than the EGL
-    // framebuffer and makes resize updates visible in the same frame.
+    // Fixed logical producer, matching the original imgui_template model.
+    // SurfaceControl scales the whole layer during resize, so framebuffer,
+    // content, font, controls and clip rectangles remain in one coordinate
+    // space and the layer's physical input bounds shrink with it.
+    constexpr int producer_w = 1028;
+    constexpr int producer_h = 828;
+    native_window_screen_x = producer_w;
+    native_window_screen_y = producer_h;
     window = android::ANativeWindowCreator::Create(
-        "Android Native Overlay Template", abs_ScreenX, abs_ScreenY, false);
+        "Android Native Overlay Template", producer_w, producer_h, false);
     if (!window) return 4;
-    android::ANativeWindowCreator::SetPosition(window, 0.0f, 0.0f);
-    if (!graphics->Init_Render(window, abs_ScreenX, abs_ScreenY)) return 5;
+    if (!graphics->Init_Render(window, producer_w, producer_h)) return 5;
     if (!Touch::Init({(float)abs_ScreenX, (float)abs_ScreenY}, true)) return 6;
     init_My_drawdata();
 
     bool running = true;
     while (running) {
         drawBegin();
-        graphics->NewFrame(true);
+        graphics->NewFrame(false); // Keep the fixed 900x828 logical framebuffer.
         Layout_tick_UI(&running);
         graphics->EndFrame();
     }

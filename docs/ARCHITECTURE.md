@@ -18,11 +18,14 @@
 - `tools/`: NDK build and self-extracting shell packaging.
 - `docs/`: architecture, build, touch, and platform notes.
 
-## Full-display host and window resize
+## Fixed logical producer and live layer transform
 
-The minimal example follows the original `imgui_template` model: one transparent
-full-display ANativeWindow/EGL framebuffer remains stable while the visible
-ImGui glass panel moves and resizes inside it. This avoids clipping caused by
-shrinking SurfaceControl crop without resizing the EGL framebuffer. Both lower
-handles update the ImGui window geometry immediately and preserve a 900:700
-aspect ratio.
+The example keeps a fixed 900x828 EGL producer: 900x700 for the glass panel,
+64 logical pixels above for the HyperOS-style size hint, and 64 below for the
+external resize handles. ImGui always renders the complete logical scene, so
+no widget or text is clipped during resize.
+
+Live proportional resize applies a SurfaceControl matrix and crop to the whole
+layer. SurfaceFlinger therefore scales framebuffer content and input bounds
+together while the EGL buffer remains stable. This avoids both the clipped
+crop behavior and the touch interception of a full-display producer.

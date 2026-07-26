@@ -152,6 +152,7 @@ namespace android {
             void *(*SurfaceComposerClient__Transaction__SetPosition)(void *thiz, StrongPointer<void> &surfaceControl, float x, float y) = nullptr;
             void *(*SurfaceComposerClient__Transaction__SetBackgroundBlurRadius)(void *thiz, StrongPointer<void> &surfaceControl, int32_t radius) = nullptr;
             void *(*SurfaceComposerClient__Transaction__SetSize)(void *thiz, StrongPointer<void> &surfaceControl, uint32_t width, uint32_t height) = nullptr;
+            void *(*SurfaceComposerClient__Transaction__SetMatrix)(void *thiz, StrongPointer<void> &surfaceControl, float dsdx, float dtdx, float dtdy, float dsdy) = nullptr;
             void *(*SurfaceComposerClient__Transaction__SetCrop)(void *thiz, StrongPointer<void> &surfaceControl, const ui::Rect &rect) = nullptr;
             void *(*SurfaceComposerClient__Transaction__SetCornerRadius)(void *thiz, StrongPointer<void> &surfaceControl, float radius) = nullptr;
             void *(*SurfaceComposerClient__Transaction__SetTrustedOverlay)(void *thiz, StrongPointer<void> &surfaceControl, bool isTrustedOverlay) = nullptr;
@@ -258,6 +259,7 @@ namespace android {
                 ResolveMethod(SurfaceComposerClient__Transaction, SetPosition, libgui, "_ZN7android21SurfaceComposerClient11Transaction11setPositionERKNS_2spINS_14SurfaceControlEEEff");
                 ResolveMethod(SurfaceComposerClient__Transaction, SetBackgroundBlurRadius, libgui, "_ZN7android21SurfaceComposerClient11Transaction23setBackgroundBlurRadiusERKNS_2spINS_14SurfaceControlEEEi");
                 ResolveMethod(SurfaceComposerClient__Transaction, SetSize, libgui, "_ZN7android21SurfaceComposerClient11Transaction7setSizeERKNS_2spINS_14SurfaceControlEEEjj");
+                ResolveMethod(SurfaceComposerClient__Transaction, SetMatrix, libgui, "_ZN7android21SurfaceComposerClient11Transaction9setMatrixERKNS_2spINS_14SurfaceControlEEEffff");
                 ResolveMethod(SurfaceComposerClient__Transaction, SetCrop, libgui, "_ZN7android21SurfaceComposerClient11Transaction7setCropERKNS_2spINS_14SurfaceControlEEERKNS_4RectE");
                 ResolveMethod(SurfaceComposerClient__Transaction, SetCornerRadius, libgui, "_ZN7android21SurfaceComposerClient11Transaction15setCornerRadiusERKNS_2spINS_14SurfaceControlEEEf");
                 ResolveMethod(SurfaceComposerClient__Transaction, SetTrustedOverlay, libgui, "_ZN7android21SurfaceComposerClient11Transaction17setTrustedOverlayERKNS_2spINS_14SurfaceControlEEEb");
@@ -403,6 +405,12 @@ namespace android {
             void *SetSize(StrongPointer<void> &surfaceControl, uint32_t width, uint32_t height) {
                 auto fn = Functionals::GetInstance().SurfaceComposerClient__Transaction__SetSize;
                 return fn ? fn(data, surfaceControl, width, height) : nullptr;
+            }
+
+            void *SetMatrix(StrongPointer<void> &surfaceControl, float dsdx,
+                            float dtdx, float dtdy, float dsdy) {
+                auto fn = Functionals::GetInstance().SurfaceComposerClient__Transaction__SetMatrix;
+                return fn ? fn(data, surfaceControl, dsdx, dtdx, dtdy, dsdy) : nullptr;
             }
 
             void *SetCrop(StrongPointer<void> &surfaceControl, const ui::Rect &rect) {
@@ -641,6 +649,24 @@ namespace android {
             transaction.SetPosition(secondControl, x, y);
             // One asynchronous transaction keeps the two layers atomically aligned
             // without blocking the render thread during every drag sample.
+            return 0 == transaction.Apply(false, true);
+        }
+
+        static bool SetLayerGeometry(ANativeWindow *nativeWindow,
+                                     int32_t cropWidth, int32_t cropHeight,
+                                     float scale) {
+            auto it = m_cachedSurfaceControl.find(nativeWindow);
+            if (it == m_cachedSurfaceControl.end()) return false;
+            auto &fn = detail::Functionals::GetInstance();
+            if (!fn.SurfaceComposerClient__Transaction__SetMatrix ||
+                !fn.SurfaceComposerClient__Transaction__SetCrop ||
+                !fn.SurfaceComposerClient__Transaction__Apply) return false;
+            detail::StrongPointer<void> control{};
+            control.pointer = it->second.data;
+            detail::ui::Rect crop{0, 0, cropWidth, cropHeight};
+            detail::SurfaceComposerClientTransaction transaction;
+            transaction.SetCrop(control, crop);
+            transaction.SetMatrix(control, scale, 0.0f, 0.0f, scale);
             return 0 == transaction.Apply(false, true);
         }
 
