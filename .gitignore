@@ -1,0 +1,14 @@
+*~
+*.o
+*.so
+*.a
+*.swp
+*.tmp
+*.bak
+build/
+build-*/
+build-manual/
+.idea/
+.vscode/
+CMakeUserPresets.json
+

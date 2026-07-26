@@ -1,0 +1,9 @@
+    .section .rodata.linuxbkr_audio,"a",@progbits
+    .balign 16
+    .global linuxbkr_rapture_start
+    .type linuxbkr_rapture_start, %object
+linuxbkr_rapture_start:
+    .incbin "@LINUXBKR_AUDIO_FILE@"
+    .global linuxbkr_rapture_end
+    .type linuxbkr_rapture_end, %object
+linuxbkr_rapture_end:
