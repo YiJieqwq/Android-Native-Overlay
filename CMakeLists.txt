@@ -40,3 +40,27 @@ target_include_directories(redteam_ui PRIVATE
  template/include/My_Utils template/include/My_Utils/stb_image template/include/ImGui
  template/include/ImGui/backends third_party/miniaudio)
 target_link_libraries(redteam_ui log android EGL GLESv3 z dl OpenSLES)
+
+set(MINIMAL_SOURCES
+ examples/minimal_overlay/src/main.cpp
+ examples/minimal_overlay/src/draw.cpp
+ template/src/Android_touch/TouchHelperA.cpp
+ template/src/Android_Graphics/GraphicsManager.cpp
+ template/src/Android_Graphics/OpenGLGraphics.cpp
+ template/src/Android_my_imgui/AndroidImgui.cpp
+ template/src/Android_my_imgui/my_imgui.cpp
+ template/src/Android_my_imgui/my_imgui_impl_android.cpp
+ template/src/ImGui/imgui.cpp
+ template/src/ImGui/imgui_draw.cpp
+ template/src/ImGui/imgui_tables.cpp
+ template/src/ImGui/imgui_widgets.cpp
+ template/src/ImGui/backends/imgui_impl_opengl3.cpp
+)
+add_executable(minimal_overlay ${MINIMAL_SOURCES})
+target_include_directories(minimal_overlay PRIVATE
+ examples/minimal_overlay/include examples/minimal_overlay/include/Android_draw
+ template/include template/include/Android_Graphics
+ template/include/Android_my_imgui template/include/Android_touch
+ template/include/My_Utils/stb_image template/include/ImGui
+ template/include/ImGui/My_font template/include/ImGui/backends)
+target_link_libraries(minimal_overlay log android EGL GLESv3 z dl OpenSLES)
