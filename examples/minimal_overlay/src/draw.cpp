@@ -19,12 +19,12 @@ float surface_screen_x = 0.0f, surface_screen_y = 0.0f;
 namespace {
 using Clock = std::chrono::steady_clock;
 constexpr float kBaseWidth = 900.0f;
-constexpr float kSideMargin = 64.0f;
+constexpr float kSideMargin = 36.0f;
 constexpr float kProducerWidth = kSideMargin + kBaseWidth + kSideMargin;
 constexpr float kBaseHeight = 700.0f;
 constexpr float kTitleHeight = 68.0f;
 constexpr float kTopMargin = 64.0f;
-constexpr float kBottomMargin = 64.0f;
+constexpr float kBottomMargin = 36.0f;
 constexpr float kProducerHeight = kTopMargin + kBaseHeight + kBottomMargin;
 constexpr float kMinScale = 0.56f;
 Clock::time_point last_display_query{};
@@ -161,7 +161,13 @@ void Layout_tick_UI(bool *running) {
     if(ImGui::IsItemClicked()) *running=false;
 
     if(!collapsed) {
+        // Constrain normal content to the glass rectangle. The parent host also
+        // contains transparent side margins for the external resize handles.
         ImGui::SetCursorPos({kSideMargin+24,kTopMargin+92});
+        ImGui::BeginChild("##glass_content", {kBaseWidth-48,kBaseHeight-116},
+                          false, ImGuiWindowFlags_NoBackground |
+                                 ImGuiWindowFlags_NoScrollbar |
+                                 ImGuiWindowFlags_NoScrollWithMouse);
         ImGui::Text("Display: %d x %d",abs_ScreenX,abs_ScreenY);
         ImGui::Text("Window: %d x %d  Scale: %.2f",
             (int)std::lround(kBaseWidth*layer_scale),
@@ -172,8 +178,9 @@ void Layout_tick_UI(bool *running) {
         ImGui::Spacing();
         ImGui::TextUnformatted("Drag the title bar to move.");
         ImGui::TextUnformatted("Drag either outer corner for proportional resize.");
+        ImGui::EndChild();
 
-        constexpr float handle=52;
+        constexpr float handle=32;
         constexpr float gap=4;
         const float hy=kTopMargin+kBaseHeight+gap;
         ImGui::SetCursorPos({kSideMargin-handle-4,hy});
@@ -234,8 +241,8 @@ void Layout_tick_UI(bool *running) {
     float glass_h_px=(collapsed?kTitleHeight:kBaseHeight)*sc;
     float glass_x=surface_screen_x+kSideMargin*sc;
     My_Vector2 pos[3]={{glass_x,glass_y},
-        {glass_x-(52+4)*sc,glass_y+glass_h_px},
+        {glass_x-(32+4)*sc,glass_y+glass_h_px},
         {glass_x+(kBaseWidth+4)*sc,glass_y+glass_h_px}};
-    My_Vector2 size[3]={{kBaseWidth*sc,glass_h_px},{52*sc,56*sc},{52*sc,56*sc}};
+    My_Vector2 size[3]={{kBaseWidth*sc,glass_h_px},{32*sc,32*sc},{32*sc,32*sc}};
     Touch::SetTouchObstacle(pos,size,collapsed?1:3);
 }

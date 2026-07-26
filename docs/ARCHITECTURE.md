@@ -20,10 +20,12 @@
 
 ## Fixed logical producer and live layer transform
 
-The example keeps a fixed 900x828 EGL producer: 900x700 for the glass panel,
-64 logical pixels above for the HyperOS-style size hint, and 64 below for the
-external resize handles. ImGui always renders the complete logical scene, so
-no widget or text is clipped during resize.
+The example keeps a fixed 972x800 EGL producer: a 900x700 glass panel, a
+64-pixel transparent strip above for the size hint, and compact 36-pixel side
+and lower margins for resize handles. The glass content is rendered inside a
+clipped child region, so transparent control margins never affect content
+alignment. ImGui always renders the complete logical scene, so no widget or
+text is clipped during resize.
 
 Live proportional resize applies a SurfaceControl matrix and crop to the whole
 layer. SurfaceFlinger therefore scales framebuffer content and input bounds
