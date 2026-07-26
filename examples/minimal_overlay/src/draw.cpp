@@ -80,14 +80,10 @@ void Layout_tick_UI(bool *running) {
                  ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
-    // Draw and handle a fixed top bar. Dragging uses absolute screen touch
-    // coordinates, so moving the Surface does not feed back into ImGui-local
-    // coordinates and cause lag/jitter.
+    // Keep the top region visually integrated with the panel. It remains an
+    // invisible drag target instead of drawing a separate title-bar strip.
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const ImVec2 panel_pos = ImGui::GetWindowPos();
-    dl->AddRectFilled(panel_pos, {panel_pos.x + width, panel_pos.y + 68.0f},
-                      IM_COL32(49, 74, 121, 255), 18.0f,
-                      ImDrawFlags_RoundCornersTop);
     dl->AddText({panel_pos.x + 24.0f, panel_pos.y + 20.0f},
                 IM_COL32(245, 247, 252, 255), "Android Native Overlay");
 
