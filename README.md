@@ -54,3 +54,14 @@ the explicit UI close button only exits the demo.
 Use this template only on devices and software for which you have authorization.
 See `docs/SAFE_OBFUSCATION.md`, `docs/TOUCH_INPUT.md`, and
 `template/README.md` for details.
+
+## Documentation
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/BUILDING.md`](docs/BUILDING.md)
+- [`docs/PLATFORM_NOTES.md`](docs/PLATFORM_NOTES.md)
+- [`docs/TOUCH_INPUT.md`](docs/TOUCH_INPUT.md)
+- [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md)
+
+The project uses private SurfaceComposer ABI and must be validated per OEM.
+See the tagged-pointer cleanup note in `docs/PLATFORM_NOTES.md`.
