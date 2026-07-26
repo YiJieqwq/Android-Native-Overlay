@@ -1,40 +1,56 @@
-# Linuxbkr UI Phototype
+# Android Native Overlay Template
 
-UI-only companion repository for **Linuxbkr**. This repository contains the
-SurfaceComposer/OpenGL ES/ImGui overlay implementation, touch observer,
-rendering experiments, ImGui reference template, embedded safe-build audio, and
-safe-obfuscated test artifacts.
+**Linuxbkr UI Phototype** is an Android native overlay template based on
+SurfaceComposer, OpenGL ES 3, Dear ImGui, EGL, and a non-exclusive touch
+observer.
 
-## Scope
+## What it provides
 
-This repository intentionally contains no partition-wiping, KPM/KPatch,
-reboot, block-device write, network authorization, camera upload, or destructive
-backend. The included `safe-obfuscated` build uses simulated read-only
-`/dev/block/by-name/*` log entries and inert power-state controls except for the
-explicit UI close button.
+- Native SurfaceComposer/ANativeWindow overlay creation;
+- OpenGL ES 3 + Dear ImGui rendering;
+- non-exclusive touch observation with pointer latching and event queuing;
+- runtime surface resize/rebinding for foldable panels;
+- optional compositor blur and rounded UI drawing;
+- AArch64 Android PIE build and self-extracting shell packaging;
+- a safe demo with simulated, read-only `/dev/block/by-name/*` log entries.
 
-## Contents
+## Repository layout
 
-- `src/`, `include/`: current Linuxbkr UI implementation;
-- `references/imgui_template/`: older standalone SurfaceComposer + ImGui +
-  touch reference template;
-- `dist/safe-obfuscated/`: AArch64 Android safe-obfuscated ELF and shell build;
-- `assets/audio/`: compressed embedded UI test audio;
-- `docs/`: touch and safe-obfuscation notes;
-- `tools/`: Android build and packaging helpers.
+```text
+template/                       reusable overlay runtime
+examples/safe_demo/             Linuxbkr safe UI example and audio
+examples/minimal_overlay/       minimal-example starting point
+references/imgui_template/      older standalone ImGui reference
+dist/safe-obfuscated/            built safe demo artifacts
+third_party/miniaudio/           embedded audio dependency
+tools/                           Android build/package helpers
+docs/                            architecture and safety notes
+```
 
 ## Build
+
+The default CMake target builds the safe demo while using the reusable runtime
+from `template/`:
 
 ```sh
 export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
 ./tools/build_android_aarch64_host.sh safe-obfuscated
 ```
 
-Artifacts are written to `dist/safe-obfuscated/`. The build targets Android
-API 28, AArch64, PIE, Full RELRO, and BIND_NOW.
+The output is written to:
 
-## Safety
+```text
+dist/safe-obfuscated/
+```
 
-Use only on devices and software for which you have authorization. The safe
-profile is intended for UI testing and does not perform storage writes or
-system power operations.
+The target is Android API 28, AArch64, PIE, Full RELRO, and BIND_NOW.
+
+## Safety scope
+
+The safe demo contains no partition-writing, KPM/KPatch, reboot, destructive
+command, or network authorization backend. Its power-state buttons are inert;
+the explicit UI close button only exits the demo.
+
+Use this template only on devices and software for which you have authorization.
+See `docs/SAFE_OBFUSCATION.md`, `docs/TOUCH_INPUT.md`, and
+`template/README.md` for details.
